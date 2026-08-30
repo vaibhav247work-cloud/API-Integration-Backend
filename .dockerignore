@@ -1,0 +1,8 @@
+target
+.idea
+.vscode
+logs
+tmp
+*.log
+.env
+.env.*

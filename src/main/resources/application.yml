@@ -1,0 +1,155 @@
+spring:
+  application:
+    name: integration-engine
+  lifecycle:
+    timeout-per-shutdown-phase: ${SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE:30s}
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/integration_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:120}
+      minimum-idle: ${DB_MIN_IDLE:24}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:30000}
+      validation-timeout: ${DB_VALIDATION_TIMEOUT_MS:5000}
+      idle-timeout: ${DB_IDLE_TIMEOUT_MS:300000}
+      max-lifetime: ${DB_MAX_LIFETIME_MS:1800000}
+      leak-detection-threshold: ${DB_LEAK_DETECTION_MS:0}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    placeholder-replacement: false
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: never
+    overwrite-existing-jobs: true
+    properties:
+      org:
+        quartz:
+          scheduler:
+            instanceName: integration-cluster
+            instanceId: AUTO
+          threadPool:
+            threadCount: ${INTEGRATION_QUARTZ_THREAD_COUNT:24}
+            threadPriority: 5
+          jobStore:
+            class: org.springframework.scheduling.quartz.LocalDataSourceJobStore
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+            useProperties: false
+            tablePrefix: QRTZ_
+            isClustered: true
+            clusterCheckinInterval: ${INTEGRATION_QUARTZ_CLUSTER_CHECKIN_MS:20000}
+            misfireThreshold: ${INTEGRATION_QUARTZ_MISFIRE_THRESHOLD_MS:60000}
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
+server:
+  shutdown: ${SERVER_SHUTDOWN:graceful}
+  forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:framework}
+  tomcat:
+    threads:
+      max: ${SERVER_TOMCAT_THREADS_MAX:512}
+      min-spare: ${SERVER_TOMCAT_THREADS_MIN_SPARE:32}
+    accept-count: ${SERVER_TOMCAT_ACCEPT_COUNT:1000}
+    max-connections: ${SERVER_TOMCAT_MAX_CONNECTIONS:8192}
+    connection-timeout: ${SERVER_TOMCAT_CONNECTION_TIMEOUT_MS:5000}
+    keep-alive-timeout: ${SERVER_TOMCAT_KEEPALIVE_TIMEOUT_MS:20000}
+    max-keep-alive-requests: ${SERVER_TOMCAT_MAX_KEEPALIVE_REQUESTS:1000}
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/plain,text/xml,text/html,text/css,application/javascript
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: ${MANAGEMENT_HEALTH_PROBES_ENABLED:true}
+      show-details: ${MANAGEMENT_HEALTH_SHOW_DETAILS:never}
+
+logging:
+  file:
+    name: ${INTEGRATION_LOG_FILE:logs/integration-engine.log}
+  level:
+    root: ${ROOT_LOG_LEVEL:INFO}
+    com.example.integration: ${APP_LOG_LEVEL:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [corr:%X{correlationId:-na} client:%X{clientName:-na} schedule:%X{scheduleType:-na}] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [corr:%X{correlationId:-na} client:%X{clientName:-na} schedule:%X{scheduleType:-na}] - %msg%n"
+  logback:
+    rollingpolicy:
+      file-name-pattern: ${INTEGRATION_LOG_FILE_PATTERN:logs/archive/integration-engine.%d{yyyy-MM-dd}.%i.log.gz}
+      max-file-size: 10MB
+      max-history: 15
+      clean-history-on-start: true
+      total-size-cap: 1GB
+
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_API_DOCS_ENABLED:false}
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: ${SPRINGDOC_SWAGGER_UI_ENABLED:false}
+
+app:
+  cors:
+    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
+    allowed-methods: ${APP_CORS_ALLOWED_METHODS:GET,POST,PUT,PATCH,DELETE,OPTIONS}
+    allowed-headers: ${APP_CORS_ALLOWED_HEADERS:*}
+    exposed-headers: ${APP_CORS_EXPOSED_HEADERS:Location}
+    allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:true}
+    max-age-seconds: ${APP_CORS_MAX_AGE_SECONDS:3600}
+
+integration:
+  executor:
+    pool-size: ${INTEGRATION_EXECUTOR_POOL_SIZE:64}
+    queue-capacity: ${INTEGRATION_EXECUTOR_QUEUE_CAPACITY:1024}
+  scheduler:
+    pool-size: ${INTEGRATION_SCHEDULER_POOL_SIZE:16}
+  http-client:
+    max-connections: ${INTEGRATION_HTTP_CLIENT_MAX_CONNECTIONS:1000}
+    pending-acquire-max-count: ${INTEGRATION_HTTP_CLIENT_PENDING_ACQUIRE_MAX_COUNT:4000}
+    connect-timeout-ms: ${INTEGRATION_HTTP_CLIENT_CONNECT_TIMEOUT_MS:5000}
+    response-timeout-seconds: ${INTEGRATION_HTTP_CLIENT_RESPONSE_TIMEOUT_SECONDS:90}
+  retry:
+    poll-interval-ms: ${INTEGRATION_RETRY_POLL_INTERVAL_MS:60000}
+    delay-minutes: ${INTEGRATION_RETRY_DELAY_MINUTES:15}
+  scalable:
+    roles: ${INTEGRATION_RUNTIME_ROLES:API,SCHEDULER,WORKER}
+    migration-mode: ${INTEGRATION_SCALABLE_MIGRATION_MODE:QUEUE}
+    job-store-vendor: ${INTEGRATION_SCALABLE_JOB_STORE_VENDOR:MYSQL}
+    worker:
+      batch-size: ${INTEGRATION_SCALABLE_WORKER_BATCH_SIZE:64}
+      max-concurrency: ${INTEGRATION_SCALABLE_WORKER_MAX_CONCURRENCY:128}
+      queue-capacity: ${INTEGRATION_SCALABLE_WORKER_QUEUE_CAPACITY:2048}
+      poll-interval-ms: ${INTEGRATION_SCALABLE_WORKER_POLL_INTERVAL_MS:1000}
+      lease-seconds: ${INTEGRATION_SCALABLE_WORKER_LEASE_SECONDS:300}
+      heartbeat-seconds: ${INTEGRATION_SCALABLE_WORKER_HEARTBEAT_SECONDS:15}
+  csv:
+    temp-directory: ${INTEGRATION_CSV_TEMP_DIR:${java.io.tmpdir}/integration-engine}
+  storage:
+    http-api:
+      upload-url-template:
+        MONTHLY: ${INTEGRATION_HTTP_API_UPLOAD_URL_TEMPLATE_MONTHLY:}
+        HOURLY: ${INTEGRATION_HTTP_API_UPLOAD_URL_TEMPLATE_HOURLY:}
+        DAILY: ${INTEGRATION_HTTP_API_UPLOAD_URL_TEMPLATE_DAILY:}
+      access-token-header-name: ${INTEGRATION_HTTP_API_ACCESS_TOKEN_HEADER_NAME:accessToken}
+      user-id-header-name: ${INTEGRATION_HTTP_API_USER_ID_HEADER_NAME:userId}
+      tenants-json: ${INTEGRATION_HTTP_API_TENANTS_JSON:}

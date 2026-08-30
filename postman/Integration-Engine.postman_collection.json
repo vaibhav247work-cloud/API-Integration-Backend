@@ -1,0 +1,619 @@
+{
+  "info": {
+    "_postman_id": "7a9c1ef2-42a4-4f0d-9d5b-0ab86d9b9d61",
+    "name": "Integration Engine",
+    "description": "Postman collection for the Spring Boot Integration Engine APIs. The backend is now queue-first for development, so prefer /enqueue and /api/jobs for high-concurrency testing.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "integrationId",
+      "value": "1"
+    },
+    {
+      "key": "failureId",
+      "value": "1"
+    },
+    {
+      "key": "runId",
+      "value": "1"
+    },
+    {
+      "key": "jobId",
+      "value": "1"
+    },
+    {
+      "key": "enabledValue",
+      "value": "true"
+    },
+    {
+      "key": "scheduleType",
+      "value": "MONTHLY"
+    },
+    {
+      "key": "jobStatus",
+      "value": "PENDING"
+    },
+    {
+      "key": "fromTime",
+      "value": "2026-03-01T00:00:00"
+    },
+    {
+      "key": "toTime",
+      "value": "2026-03-31T23:59:59"
+    }
+  ],
+  "item": [
+    {
+      "name": "Integrations",
+      "item": [
+        {
+          "name": "Get All Integrations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/integrations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "integrations"
+              ]
+            },
+            "description": "Returns all integration definitions, including the seeded dummy entries."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Integration By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/integrations/{{integrationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "integrations",
+                "{{integrationId}}"
+              ]
+            },
+            "description": "Fetches a single integration. Useful before a full PUT update."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Integration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var data = pm.response.json();",
+                  "    if (data && data.id) {",
+                  "        pm.collectionVariables.set('integrationId', String(data.id));",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+                "raw": "{\n  \"clientName\": \"Postman Demo Integration\",\n  \"brandCode\": \"CLIA\",\n  \"baseUrl\": \"https://client-a.example.com/api\",\n  \"enabled\": false,\n  \"schedulerMode\": \"QUEUE\",\n  \"scheduleConfig\": [\n    {\n      \"type\": \"DAILY\",\n      \"enabled\": true\n    },\n    {\n      \"type\": \"MONTHLY\",\n      \"enabled\": true\n    },\n    {\n      \"type\": \"HOURLY\",\n      \"enabled\": true,\n      \"intervalHours\": 1\n    }\n  ],\n  \"csvFileName\": \"postman_demo_orders.csv\",\n  \"outputDirectory\": \"output/postman-demo\",\n  \"maxRetries\": 2,\n  \"authConfig\": {\n    \"type\": \"API_KEY_HEADER\",\n    \"headerName\": \"X-API-KEY\",\n    \"headerValue\": \"replace-with-real-key\"\n  },\n  \"responseConfig\": {\n    \"recordPath\": \"$.data.orders\",\n    \"recordPathType\": \"JSON_PATH\",\n    \"duplicateHandling\": {\n      \"enabled\": true,\n      \"keyHeaders\": [\"ORDER_ID\"],\n      \"defaultAction\": \"KEEP_FIRST\",\n      \"fieldActions\": {\n        \"TOTAL_AMOUNT\": \"SUM\"\n      }\n    }\n  },\n  \"paginationConfig\": {\n    \"enabled\": true,\n    \"mode\": \"PAGE_NUMBER\",\n    \"startPage\": 1,\n    \"pageParam\": \"page\",\n    \"totalPagesPath\": \"$.meta.totalPages\",\n    \"totalPagesPathType\": \"JSON_PATH\"\n  },\n  \"storageConfig\": {\n    \"type\": \"LOCAL\",\n    \"localDirectory\": \"output/postman-demo\"\n  },\n  \"stepConfig\": [\n    {\n      \"orderIndex\": 1,\n      \"name\": \"fetch-orders\",\n      \"method\": \"GET\",\n      \"url\": \"/orders\",\n      \"queryParams\": {\n        \"page\": \"${page}\",\n        \"fromDate\": \"${windowStartDate}\",\n        \"toDate\": \"${windowEndDateExclusive}\"\n      },\n      \"requestFormat\": \"JSON\",\n      \"responseFormat\": \"JSON\",\n      \"paginate\": true,\n      \"dataStep\": true\n    }\n  ],\n  \"fieldMappings\": [\n    {\n      \"sortOrder\": 1,\n      \"mappingType\": \"SOURCE_PATH\",\n      \"sourcePath\": \"$.orderId\",\n      \"pathType\": \"JSON_PATH\",\n      \"targetHeader\": \"ORDER_ID\",\n      \"requiredFlag\": true\n    },\n    {\n      \"sortOrder\": 2,\n      \"mappingType\": \"CONSTANT\",\n      \"targetHeader\": \"STORE_ID\",\n      \"expression\": \"1\",\n      \"requiredFlag\": false\n    },\n    {\n      \"sortOrder\": 3,\n      \"mappingType\": \"EXPRESSION\",\n      \"targetHeader\": \"TOTAL_AMOUNT\",\n      \"expression\": \"num('$.net') + num('$.gross')\",\n      \"defaultValue\": \"0\",\n      \"requiredFlag\": false\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/integrations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "integrations"
+              ]
+            },
+            "description": "Creates a new integration definition. On success, the response id is stored in the collection variable integrationId."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Integration",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+                "raw": "{\n  \"id\": {{integrationId}},\n  \"clientName\": \"Postman Demo Integration Updated\",\n  \"brandCode\": \"CLIA\",\n  \"baseUrl\": \"https://client-a.example.com/api\",\n  \"enabled\": false,\n  \"schedulerMode\": \"QUEUE\",\n  \"scheduleConfig\": [\n    {\n      \"type\": \"DAILY\",\n      \"enabled\": true\n    },\n    {\n      \"type\": \"MONTHLY\",\n      \"enabled\": false\n    },\n    {\n      \"type\": \"HOURLY\",\n      \"enabled\": true,\n      \"intervalHours\": 1\n    }\n  ],\n  \"csvFileName\": \"postman_demo_orders_v2.csv\",\n  \"outputDirectory\": \"output/postman-demo\",\n  \"maxRetries\": 3,\n  \"authConfig\": {\n    \"type\": \"API_KEY_HEADER\",\n    \"headerName\": \"X-API-KEY\",\n    \"headerValue\": \"replace-with-real-key\"\n  },\n  \"responseConfig\": {\n    \"recordPath\": \"$.data.orders\",\n    \"recordPathType\": \"JSON_PATH\",\n    \"duplicateHandling\": {\n      \"enabled\": true,\n      \"keyHeaders\": [\"ORDER_ID\"],\n      \"defaultAction\": \"KEEP_FIRST\",\n      \"fieldActions\": {\n        \"TOTAL_AMOUNT\": \"SUM\"\n      }\n    }\n  },\n  \"paginationConfig\": {\n    \"enabled\": true,\n    \"mode\": \"PAGE_NUMBER\",\n    \"startPage\": 1,\n    \"pageParam\": \"page\",\n    \"totalPagesPath\": \"$.meta.totalPages\",\n    \"totalPagesPathType\": \"JSON_PATH\"\n  },\n  \"storageConfig\": {\n    \"type\": \"LOCAL\",\n    \"localDirectory\": \"output/postman-demo\"\n  },\n  \"stepConfig\": [\n    {\n      \"orderIndex\": 1,\n      \"name\": \"fetch-orders\",\n      \"method\": \"GET\",\n      \"url\": \"/orders\",\n      \"queryParams\": {\n        \"page\": \"${page}\",\n        \"fromDate\": \"${windowStartDate}\",\n        \"toDate\": \"${windowEndDateExclusive}\"\n      },\n      \"requestFormat\": \"JSON\",\n      \"responseFormat\": \"JSON\",\n      \"paginate\": true,\n      \"dataStep\": true\n    }\n  ],\n  \"fieldMappings\": [\n    {\n      \"sortOrder\": 1,\n      \"mappingType\": \"SOURCE_PATH\",\n      \"sourcePath\": \"$.orderId\",\n      \"pathType\": \"JSON_PATH\",\n      \"targetHeader\": \"ORDER_ID\",\n      \"requiredFlag\": true\n    },\n    {\n      \"sortOrder\": 2,\n      \"mappingType\": \"CONSTANT\",\n      \"targetHeader\": \"STORE_ID\",\n      \"expression\": \"10\",\n      \"requiredFlag\": false\n    },\n    {\n      \"sortOrder\": 3,\n      \"mappingType\": \"EXPRESSION\",\n      \"targetHeader\": \"TOTAL_AMOUNT\",\n      \"expression\": \"num('$.net') + num('$.gross')\",\n      \"defaultValue\": \"0\",\n      \"requiredFlag\": false\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/integrations/{{integrationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "integrations",
+                "{{integrationId}}"
+              ]
+            },
+            "description": "Full replacement update. Send the complete integration payload, including fieldMappings."
+          },
+          "response": []
+        },
+        {
+          "name": "Enable Or Disable Integration",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/integrations/{{integrationId}}/enabled?value={{enabledValue}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "integrations",
+                "{{integrationId}}",
+                "enabled"
+              ],
+              "query": [
+                {
+                  "key": "value",
+                  "value": "{{enabledValue}}"
+                }
+              ]
+            },
+            "description": "Enables or disables an integration. If scheduleConfig or legacy scheduleCron is present, the dynamic scheduler is refreshed."
+          },
+          "response": []
+        },
+        {
+          "name": "Enqueue Integration Now",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "    var data = pm.response.json();",
+                  "    if (data && data.id) {",
+                  "        pm.collectionVariables.set('jobId', String(data.id));",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/integrations/{{integrationId}}/enqueue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "integrations",
+                "{{integrationId}}",
+                "enqueue"
+              ]
+            },
+            "description": "Preferred development path for high concurrency. Creates an execution_job and stores its id into jobId."
+          },
+          "response": []
+        },
+        {
+          "name": "Enqueue Integration Custom Date",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "    var data = pm.response.json();",
+                  "    if (data && data.id) {",
+                  "        pm.collectionVariables.set('jobId', String(data.id));",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromDate\": \"2026-02-01\",\n  \"toDate\": \"2026-02-28\",\n  \"fileToken\": \"backfill_feb_2026\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/integrations/{{integrationId}}/enqueue/custom",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "integrations",
+                "{{integrationId}}",
+                "enqueue",
+                "custom"
+              ]
+            },
+            "description": "Preferred queued custom-window execution. Stores the created execution_job id into jobId."
+          },
+          "response": []
+        },
+        {
+          "name": "Run Integration Now (Sync Compatibility)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "    var data = pm.response.json();",
+                  "    if (data && data.id) {",
+                  "        pm.collectionVariables.set('runId', String(data.id));",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/integrations/{{integrationId}}/run",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "integrations",
+                "{{integrationId}}",
+                "run"
+              ]
+            },
+            "description": "Compatibility endpoint. Executes immediately and returns the full IntegrationRun row. Prefer /enqueue for load and concurrency testing."
+          },
+          "response": []
+        },
+        {
+          "name": "Run Integration Custom Date (Sync Compatibility)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "    var data = pm.response.json();",
+                  "    if (data && data.id) {",
+                  "        pm.collectionVariables.set('runId', String(data.id));",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromDate\": \"2026-02-01\",\n  \"toDate\": \"2026-02-28\",\n  \"fileToken\": \"backfill_feb_2026\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/integrations/{{integrationId}}/run/custom",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "integrations",
+                "{{integrationId}}",
+                "run",
+                "custom"
+              ]
+            },
+            "description": "Compatibility endpoint for immediate custom-window execution. Prefer /enqueue/custom for queue-first testing."
+          },
+          "response": []
+        },
+        {
+          "name": "Run Integration Schedule Config",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "    var data = pm.response.json();",
+                  "    if (data && data.id) {",
+                  "        pm.collectionVariables.set('runId', String(data.id));",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/integrations/{{integrationId}}/run/schedule?scheduleType={{scheduleType}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "integrations",
+                "{{integrationId}}",
+                "run",
+                "schedule"
+              ],
+              "query": [
+                {
+                  "key": "scheduleType",
+                  "value": "{{scheduleType}}"
+                }
+              ]
+            },
+            "description": "Triggers an immediate schedule-based run for compatibility testing. In queue-first mode, scheduled traffic should normally enter through Quartz and execution_job."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Integration",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/integrations/{{integrationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "integrations",
+                "{{integrationId}}"
+              ]
+            },
+            "description": "Deletes an integration definition and its field mappings."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Runs",
+      "item": [
+        {
+          "name": "Get All Runs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "runs"
+              ]
+            },
+            "description": "Returns all integration runs ordered by latest start time."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Run By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/runs/{{runId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "runs",
+                "{{runId}}"
+              ]
+            },
+            "description": "Returns one run with detailed diagnostics. Use this after Run Integration Now."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Runs By Integration",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/integrations/{{integrationId}}/runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "integrations",
+                "{{integrationId}}",
+                "runs"
+              ]
+            },
+            "description": "Returns run history for one integration. Queue-created runs include executionJobId for tracing back to execution_job."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Execution Jobs",
+      "item": [
+        {
+          "name": "Get All Jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "jobs"
+              ]
+            },
+            "description": "Returns execution_job rows ordered by latest planned fire time."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Job By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/{{jobId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "jobs",
+                "{{jobId}}"
+              ]
+            },
+            "description": "Returns one execution_job. Use this after Enqueue Integration Now or Enqueue Integration Custom Date."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Jobs By Integration",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs?integrationId={{integrationId}}&status={{jobStatus}}&fromTime={{fromTime}}&toTime={{toTime}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "jobs"
+              ],
+              "query": [
+                {
+                  "key": "integrationId",
+                  "value": "{{integrationId}}"
+                },
+                {
+                  "key": "status",
+                  "value": "{{jobStatus}}"
+                },
+                {
+                  "key": "fromTime",
+                  "value": "{{fromTime}}"
+                },
+                {
+                  "key": "toTime",
+                  "value": "{{toTime}}"
+                }
+              ]
+            },
+            "description": "Filters execution_job rows by integration, status, and planned fire time window."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Failures",
+      "item": [
+        {
+          "name": "Get Failure Queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/failures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "failures"
+              ]
+            },
+            "description": "Returns queued retry items from failed_job_queue. In queue-first mode this is mostly for legacy compatibility, while scalable retries live in execution_job."
+          },
+          "response": []
+        },
+        {
+          "name": "Retry Failed Item Now",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/failures/{{failureId}}/retry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "failures",
+                "{{failureId}}",
+                "retry"
+              ]
+            },
+            "description": "Triggers an immediate retry for a legacy failed_job_queue item."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

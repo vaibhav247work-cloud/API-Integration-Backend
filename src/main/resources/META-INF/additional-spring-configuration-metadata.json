@@ -1,0 +1,54 @@
+{
+	"properties": [
+		{
+			"name": "integration.executor.pool-size",
+			"type": "java.lang.String",
+			"description": "A description for 'integration.executor.pool-size'"
+		},
+		{
+			"name": "integration.scheduler.pool-size",
+			"type": "java.lang.String",
+			"description": "A description for 'integration.scheduler.pool-size'"
+		},
+		{
+			"name": "integration.csv.temp-directory",
+			"type": "java.lang.String",
+			"description": "A description for 'integration.csv.temp-directory'"
+		},
+		{
+			"name": "integration.retry.delay-minutes",
+			"type": "java.lang.String",
+			"description": "A description for 'integration.retry.delay-minutes'"
+		},
+		{
+			"name": "integration.retry.poll-interval-ms",
+			"type": "java.lang.String",
+			"description": "A description for 'integration.retry.poll-interval-ms'"
+		},
+		{
+			"name": "integration.storage.http-api.upload-url-template.monthly",
+			"type": "java.lang.String",
+			"description": "HTTP_API upload URL template used for MONTHLY runs. Supports the {tenantId} token."
+		},
+		{
+			"name": "integration.storage.http-api.upload-url-template.hourly",
+			"type": "java.lang.String",
+			"description": "HTTP_API upload URL template used for HOURLY runs. Supports the {tenantId} token."
+		},
+		{
+			"name": "integration.storage.http-api.upload-url-template.daily",
+			"type": "java.lang.String",
+			"description": "HTTP_API upload URL template used for DAILY runs. Supports the {tenantId} token."
+		},
+		{
+			"name": "integration.storage.http-api.access-token-header-name",
+			"type": "java.lang.String",
+			"description": "Header name used when a tenant-specific access token is injected into HTTP_API uploads."
+		},
+		{
+			"name": "integration.storage.http-api.user-id-header-name",
+			"type": "java.lang.String",
+			"description": "Header name used when a tenant-specific user ID is injected into HTTP_API uploads."
+		}
+	]
+}

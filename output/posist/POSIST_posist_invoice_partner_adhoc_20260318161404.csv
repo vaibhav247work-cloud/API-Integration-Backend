@@ -1,0 +1,5 @@
+Invoice_number,Invoice_discount,Total_Tax,Gross_Amount,Net_amount,StoreId,TillId
+T1-54561,0,43.2,432,388.8,1,1
+T1-54562,0,8.90,89,80.10,1,1
+T1-54563,0,48.6,486,437.4,1,1
+T1-54564,500,2.70,527,524.30,1,1
