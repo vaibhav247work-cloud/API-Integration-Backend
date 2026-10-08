@@ -34,4 +34,5 @@ public class StorageConfig {
     private Map<String, String> uploadFormFields;
     /** Optional. When set, the response body must contain this string for the upload to be considered successful. */
     private String uploadSuccessText;
+    private AuthConfig uploadAuthConfig;
 }

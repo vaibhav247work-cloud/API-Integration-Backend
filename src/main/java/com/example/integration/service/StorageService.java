@@ -27,7 +27,9 @@ public class StorageService {
 
         Map<StorageType, StorageProvider> providers = storageProviders.stream()
                 .collect(Collectors.toMap(StorageProvider::getType, Function.identity()));
-        StorageProvider provider = providers.getOrDefault(storageType, providers.get(StorageType.LOCAL));
+        StorageProvider provider = storageType == StorageType.TENANT_DEFAULT
+                ? providers.get(StorageType.HTTP_API)
+                : providers.getOrDefault(storageType, providers.get(StorageType.LOCAL));
 
         if (provider == null) {
             throw new IllegalStateException("No storage provider registered for " + storageType);

@@ -6,4 +6,5 @@ tmp
 *.log
 .env
 .env.*
+config/tenantdb.json
 output

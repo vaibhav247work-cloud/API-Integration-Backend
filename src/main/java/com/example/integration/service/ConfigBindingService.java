@@ -47,7 +47,14 @@ public class ConfigBindingService {
     }
 
     public StorageConfig getStorageConfig(IntegrationDefinition definition) {
-        return bind(normalizeNestedConfig(definition.getStorageConfig()), StorageConfig.class);
+        JsonNode storageNode = normalizeNestedConfig(definition.getStorageConfig());
+        if (storageNode != null && storageNode.isObject()
+                && storageNode.get("uploadAuthConfig") != null) {
+            ObjectNode normalizedStorage = ((ObjectNode) storageNode).deepCopy();
+            normalizedStorage.set("uploadAuthConfig", normalizeNestedConfig(storageNode.get("uploadAuthConfig")));
+            storageNode = normalizedStorage;
+        }
+        return bind(storageNode, StorageConfig.class);
     }
 
     public List<ScheduleDefinition> getScheduleDefinitions(IntegrationDefinition definition) {

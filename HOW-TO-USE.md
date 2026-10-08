@@ -1,5 +1,7 @@
 # How To Use The Integration Engine
 
+> Architecture, storage, tenant-default upload, and operations documentation is available in the [backend wiki](wiki/README.md).
+
 This guide explains how to start the app, inspect the seeded sample data, create a real integration, run it, and verify the CSV output.
 
 ## 1. What This App Does
@@ -1117,7 +1119,7 @@ Check:
 
 - [CONFIGURATION-VARIABLE-REFERENCE.md](/d:/Workplace/API-Integration/CONFIGURATION-VARIABLE-REFERENCE.md)
 - [universal-integration-engine-doc.md](/d:/Workplace/API-Integration/universal-integration-engine-doc.md)
-- [application.yml](/d:/Workplace/API-Integration/src/main/resources/application.yml)
+- [application.properties](src/main/resources/application.properties)
 - [IntegrationDefinitionController.java](/d:/Workplace/API-Integration/src/main/java/com/example/integration/controller/IntegrationDefinitionController.java)
 - [ResponseExtractionService.java](/d:/Workplace/API-Integration/src/main/java/com/example/integration/service/ResponseExtractionService.java)
 - [IntegrationOrchestrator.java](/d:/Workplace/API-Integration/src/main/java/com/example/integration/service/IntegrationOrchestrator.java)

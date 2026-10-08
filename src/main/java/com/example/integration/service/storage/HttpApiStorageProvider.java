@@ -8,6 +8,8 @@ import com.example.integration.model.enums.FailureCategory;
 import com.example.integration.model.enums.StorageType;
 import com.example.integration.model.runtime.ScheduleWindow;
 import com.example.integration.model.runtime.StoredArtifact;
+import com.example.integration.model.runtime.ExecutionContext;
+import com.example.integration.service.AuthService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -24,7 +26,10 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriUtils;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -35,17 +40,26 @@ public class HttpApiStorageProvider implements StorageProvider {
 
     private final RestTemplate restTemplate;
     private final HttpApiStorageProperties httpApiStorageProperties;
+    private final AuthService authService;
 
     @Autowired
     public HttpApiStorageProvider(RestTemplateBuilder restTemplateBuilder,
-                                  HttpApiStorageProperties httpApiStorageProperties) {
-        this(restTemplateBuilder.build(), httpApiStorageProperties);
+                                  HttpApiStorageProperties httpApiStorageProperties,
+                                  AuthService authService) {
+        this(restTemplateBuilder.build(), httpApiStorageProperties, authService);
     }
 
     HttpApiStorageProvider(RestTemplate restTemplate,
                            HttpApiStorageProperties httpApiStorageProperties) {
+        this(restTemplate, httpApiStorageProperties, null);
+    }
+
+    HttpApiStorageProvider(RestTemplate restTemplate,
+                           HttpApiStorageProperties httpApiStorageProperties,
+                           AuthService authService) {
         this.restTemplate = restTemplate;
         this.httpApiStorageProperties = httpApiStorageProperties;
+        this.authService = authService;
     }
 
     @Override
@@ -56,15 +70,29 @@ public class HttpApiStorageProvider implements StorageProvider {
     @Override
     public StoredArtifact store(Path file, IntegrationDefinition definition, StorageConfig storageConfig, ScheduleWindow scheduleWindow) {
         StorageConfig effectiveConfig = storageConfig == null ? new StorageConfig() : storageConfig;
-        ResolvedHttpUpload resolvedUpload = resolveUpload(effectiveConfig, scheduleWindow);
+        ExecutionContext uploadContext = null;
+        if (effectiveConfig.getUploadAuthConfig() != null) {
+            if (authService == null) {
+                throw new IllegalStateException("Upload authentication is unavailable");
+            }
+            uploadContext = new ExecutionContext(
+                    StringUtils.hasText(definition.getClientName()) ? definition.getClientName() : "upload-client",
+                    StringUtils.hasText(definition.getBrandCode()) ? definition.getBrandCode() : "upload-brand",
+                    scheduleWindow);
+            authService.apply(effectiveConfig.getUploadAuthConfig(), uploadContext);
+        }
+
+        ResolvedHttpUpload resolvedUpload = resolveUpload(definition, effectiveConfig, scheduleWindow);
         validate(effectiveConfig, resolvedUpload);
         storageConfig = effectiveConfig;
 
-        String uploadUrl  = resolvedUpload.uploadUrl();
+        String uploadUrl  = appendQueryParams(
+                resolvedUpload.uploadUrl(),
+                uploadContext == null ? Map.of() : uploadContext.getAuthQueryParams());
         String method     = StringUtils.hasText(effectiveConfig.getUploadMethod())
                 ? effectiveConfig.getUploadMethod().toUpperCase() : "POST";
         String fileParam  = StringUtils.hasText(effectiveConfig.getUploadFileParam())
-                ? effectiveConfig.getUploadFileParam() : "file";
+                ? effectiveConfig.getUploadFileParam() : httpApiStorageProperties.getDefaultFileParam();
         String successText = storageConfig.getUploadSuccessText(); // nullable — optional check
 
         log.info("[HTTP_API] Uploading file '{}' to '{}' for client '{}'",
@@ -84,6 +112,9 @@ public class HttpApiStorageProvider implements StorageProvider {
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         if (!CollectionUtils.isEmpty(resolvedUpload.headers())) {
             resolvedUpload.headers().forEach(headers::set);
+        }
+        if (uploadContext != null) {
+            uploadContext.getAuthHeaders().forEach(headers::set);
         }
 
         HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
@@ -161,12 +192,21 @@ public class HttpApiStorageProvider implements StorageProvider {
         }
     }
 
-    private ResolvedHttpUpload resolveUpload(StorageConfig storageConfig, ScheduleWindow scheduleWindow) {
+    private ResolvedHttpUpload resolveUpload(
+            IntegrationDefinition definition,
+            StorageConfig storageConfig,
+            ScheduleWindow scheduleWindow) {
         if (storageConfig == null) {
             return new ResolvedHttpUpload(null, Map.of(), Map.of());
         }
 
         Map<String, String> resolvedHeaders = new LinkedHashMap<>();
+        boolean tenantDefault = storageConfig.getType() == StorageType.TENANT_DEFAULT;
+        if (tenantDefault) {
+            resolvedHeaders.put("Event", httpApiStorageProperties.getDefaultEvent());
+            resolvedHeaders.put("channel", httpApiStorageProperties.getDefaultChannel());
+            resolvedHeaders.put("isSourceFileMoved", httpApiStorageProperties.getDefaultIsSourceFileMoved());
+        }
         if (!CollectionUtils.isEmpty(storageConfig.getUploadHeaders())) {
             resolvedHeaders.putAll(storageConfig.getUploadHeaders());
         }
@@ -175,11 +215,22 @@ public class HttpApiStorageProvider implements StorageProvider {
         if (!CollectionUtils.isEmpty(storageConfig.getUploadFormFields())) {
             resolvedFormFields.putAll(storageConfig.getUploadFormFields());
         }
+        if (tenantDefault) {
+            resolvedFormFields.put(httpApiStorageProperties.getDefaultPartyCodeField(),
+                    definition.getBrandCode());
+        }
 
         String uploadUrl = storageConfig.getUploadUrl();
         String scheduleUploadUrl = httpApiStorageProperties.resolveUploadUrlTemplate(
                 scheduleWindow == null ? null : scheduleWindow.getScheduleType());
         if (!StringUtils.hasText(storageConfig.getTenantId())) {
+            if (tenantDefault) {
+                throw new IntegrationFailureException(
+                        FailureCategory.CONFIGURATION_ERROR,
+                        "TENANT_DEFAULT storage requires tenantId",
+                        "FILE_STORAGE",
+                        null, null, null, false);
+            }
             if (!StringUtils.hasText(uploadUrl)) {
                 uploadUrl = scheduleUploadUrl;
             }
@@ -201,13 +252,23 @@ public class HttpApiStorageProvider implements StorageProvider {
                     ? tenantProperties.getUploadUrl()
                     : scheduleUploadUrl;
         }
+        boolean hasTenantPlaceholder = uploadUrl != null && uploadUrl.contains("{tenantId}");
         uploadUrl = replaceTenantId(uploadUrl, storageConfig.getTenantId());
+        if (tenantDefault && StringUtils.hasText(uploadUrl) && !hasTenantPlaceholder
+                && !uploadUrl.matches(".*[?&]tenantId=[^&]*.*")) {
+            uploadUrl += (uploadUrl.contains("?") ? "&" : "?")
+                    + "tenantId="
+                    + UriUtils.encodeQueryParam(storageConfig.getTenantId(), StandardCharsets.UTF_8);
+        }
 
         if (StringUtils.hasText(tenantProperties.getAccessToken())) {
             resolvedHeaders.put(httpApiStorageProperties.getAccessTokenHeaderName(), tenantProperties.getAccessToken());
         }
         if (StringUtils.hasText(tenantProperties.getUserId())) {
             resolvedHeaders.put(httpApiStorageProperties.getUserIdHeaderName(), tenantProperties.getUserId());
+        }
+        if (StringUtils.hasText(tenantProperties.getRegisterId())) {
+            resolvedHeaders.put("Register_Id", tenantProperties.getRegisterId());
         }
         if (!CollectionUtils.isEmpty(tenantProperties.getHeaders())) {
             resolvedHeaders.putAll(tenantProperties.getHeaders());
@@ -224,6 +285,15 @@ public class HttpApiStorageProvider implements StorageProvider {
             return value;
         }
         return value.replace("{tenantId}", tenantId);
+    }
+
+    private String appendQueryParams(String url, Map<String, String> queryParams) {
+        if (!StringUtils.hasText(url) || CollectionUtils.isEmpty(queryParams)) {
+            return url;
+        }
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url);
+        queryParams.forEach(builder::queryParam);
+        return builder.build().encode().toUriString();
     }
 
     private void validate(StorageConfig storageConfig, ResolvedHttpUpload resolvedUpload) {
