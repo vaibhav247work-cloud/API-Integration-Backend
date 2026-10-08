@@ -22,6 +22,8 @@ public class StepConfig {
     private RequestWindowMode requestWindowMode = RequestWindowMode.NONE;
     private String requestDateVariable = "requestDate";
     private String requestDateFormat;
+    private String windowStartDateFormat;
+    private String windowEndDateFormat;
     private Boolean paginate = false;
     private Boolean dataStep = true;
     private String responseAlias;

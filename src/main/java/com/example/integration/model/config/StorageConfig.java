@@ -18,7 +18,7 @@ public class StorageConfig {
     private String region;
     private String keyPrefix;
 
-    // FTP
+    // FTP / SFTP
     private String host;
     private Integer port = 21;
     private String username;

@@ -38,7 +38,37 @@ public class PaginationService {
             return executeSingleDateWindow(definition, step, paginationConfig, context);
         }
 
+        if (step.getRequestWindowMode() == RequestWindowMode.DATE_RANGE) {
+            return executeDateRangeWindow(definition, step, paginationConfig, context);
+        }
+
         return executeStep(definition, step, paginationConfig, context);
+    }
+
+    private List<StepResponse> executeDateRangeWindow(
+            IntegrationDefinition definition,
+            StepConfig step,
+            PaginationConfig paginationConfig,
+            ExecutionContext context) {
+
+        if (context.getScheduleWindow() == null || context.getScheduleWindow().getWindowStart() == null) {
+            return executeStep(definition, step, paginationConfig, context);
+        }
+
+        LocalDate startDate = context.getScheduleWindow().getWindowStart().toLocalDate();
+        LocalDate endDate = context.getScheduleWindow().getWindowEnd() == null
+                ? startDate
+                : context.getScheduleWindow().getWindowEnd().toLocalDate();
+        Map<String, String> originalValues = captureVariables(
+                context, "windowStartDate", "windowEndDateExclusive");
+
+        context.putVariable("windowStartDate", resolveFormatter(step.getWindowStartDateFormat()).format(startDate));
+        context.putVariable("windowEndDateExclusive", resolveFormatter(step.getWindowEndDateFormat()).format(endDate));
+        try {
+            return executeStep(definition, step, paginationConfig, context);
+        } finally {
+            restoreVariables(context, originalValues);
+        }
     }
 
     private List<StepResponse> executeStep(
@@ -176,6 +206,8 @@ public class PaginationService {
         copy.setRequestWindowMode(source.getRequestWindowMode());
         copy.setRequestDateVariable(source.getRequestDateVariable());
         copy.setRequestDateFormat(source.getRequestDateFormat());
+        copy.setWindowStartDateFormat(source.getWindowStartDateFormat());
+        copy.setWindowEndDateFormat(source.getWindowEndDateFormat());
         copy.setPaginate(source.getPaginate());
         copy.setDataStep(source.getDataStep());
         copy.setResponseAlias(source.getResponseAlias());
@@ -211,13 +243,15 @@ public class PaginationService {
                 : DateTimeFormatter.ISO_LOCAL_DATE;
     }
 
-    private Map<String, String> captureVariables(ExecutionContext context, String requestDateVariable) {
+    private Map<String, String> captureVariables(ExecutionContext context, String... variableNames) {
         Map<String, String> originalValues = new LinkedHashMap<>();
         originalValues.put("requestDate", context.getVariableAsString("requestDate"));
         originalValues.put("requestDateIso", context.getVariableAsString("requestDateIso"));
         originalValues.put("processDate", context.getVariableAsString("processDate"));
-        if (!"requestDate".equals(requestDateVariable)) {
-            originalValues.put(requestDateVariable, context.getVariableAsString(requestDateVariable));
+        for (String variableName : variableNames) {
+            if (StringUtils.hasText(variableName) && !originalValues.containsKey(variableName)) {
+                originalValues.put(variableName, context.getVariableAsString(variableName));
+            }
         }
         return originalValues;
     }

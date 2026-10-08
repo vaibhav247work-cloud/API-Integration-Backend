@@ -182,6 +182,8 @@ New request-window fields inside each `stepConfig` item:
 - `requestWindowMode`: `NONE`, `SINGLE_DATE`, or `DATE_RANGE`
 - `requestDateVariable`: placeholder variable name to fill during single-date fan-out
 - `requestDateFormat`: optional Java date pattern like `yyyy-MM-dd` or `yyyyMMdd`
+- `windowStartDateFormat`: optional Java date pattern for `${windowStartDate}`
+- `windowEndDateFormat`: optional Java date pattern for `${windowEndDateExclusive}`
 
 New response-window fields inside `responseConfig`:
 
@@ -646,6 +648,11 @@ Available runtime variables in request templates:
 - `${businessDate}` for daily runs
 - `${previousMonth}` for monthly runs
 - `${processHour}` for hourly runs
+
+For `DATE_RANGE` steps, `windowStartDateFormat` and
+`windowEndDateFormat` format `${windowStartDate}` and
+`${windowEndDateExclusive}` before they are substituted into query parameters,
+headers, URLs, or `bodyTemplate`. Blank formats use `yyyy-MM-dd`.
 
 To add a new schedule type later, add a new `ScheduleType` and one new schedule strategy class.
 

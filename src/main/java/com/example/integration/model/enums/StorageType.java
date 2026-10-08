@@ -4,5 +4,6 @@ public enum StorageType {
     LOCAL,
     S3,
     FTP,
+    SFTP,
     HTTP_API
 }

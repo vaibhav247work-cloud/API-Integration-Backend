@@ -10,6 +10,7 @@ import com.example.integration.model.config.StorageConfig;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -24,7 +25,17 @@ public class ConfigBindingService {
     private final ObjectMapper objectMapper;
 
     public AuthConfig getAuthConfig(IntegrationDefinition definition) {
-        return bind(definition.getAuthConfig(), AuthConfig.class);
+        JsonNode authConfig = definition.getAuthConfig();
+        if (authConfig != null && authConfig.isObject()
+                && authConfig.get("config") != null
+                && authConfig.get("config").isObject()) {
+            ObjectNode normalized = objectMapper.createObjectNode();
+            normalized.setAll((ObjectNode) authConfig);
+            JsonNode nestedConfig = normalized.remove("config");
+            normalized.setAll((ObjectNode) nestedConfig);
+            authConfig = normalized;
+        }
+        return bind(authConfig, AuthConfig.class);
     }
 
     public PaginationConfig getPaginationConfig(IntegrationDefinition definition) {
@@ -36,7 +47,7 @@ public class ConfigBindingService {
     }
 
     public StorageConfig getStorageConfig(IntegrationDefinition definition) {
-        return bind(definition.getStorageConfig(), StorageConfig.class);
+        return bind(normalizeNestedConfig(definition.getStorageConfig()), StorageConfig.class);
     }
 
     public List<ScheduleDefinition> getScheduleDefinitions(IntegrationDefinition definition) {
@@ -82,5 +93,19 @@ public class ConfigBindingService {
             return List.of();
         }
         return objectMapper.convertValue(node, typeReference);
+    }
+
+    private JsonNode normalizeNestedConfig(JsonNode node) {
+        if (node == null || !node.isObject()
+                || node.get("config") == null
+                || !node.get("config").isObject()) {
+            return node;
+        }
+
+        ObjectNode normalized = objectMapper.createObjectNode();
+        normalized.setAll((ObjectNode) node);
+        JsonNode nestedConfig = normalized.remove("config");
+        normalized.setAll((ObjectNode) nestedConfig);
+        return normalized;
     }
 }

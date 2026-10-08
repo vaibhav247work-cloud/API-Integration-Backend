@@ -6,3 +6,4 @@ tmp/
 .vscode/
 .env.local
 .env.*.local
+output
